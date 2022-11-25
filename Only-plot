@@ -1,0 +1,82 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from pdf2image import convert_from_path
+
+
+df = pd.read_csv("DATA2.txt", header=0, delimiter="\t")
+data_you_needx=pd.DataFrame()
+data_you_needname = pd.DataFrame()
+data_you_needy=pd.DataFrame()
+
+
+
+
+for i  in (1,2,3,6,7,8):
+    for f in ("Et30","f(e)","f(n)","a","b","SP","SdP","SA","SB" ):
+         sv_params = str(f)
+         n = [sv_params] 
+         
+         x = df.loc[:,sv_params]
+# #       # z = probe.iloc[:,1].values
+         probe = str(i)
+         y = df.loc[:, probe]
+         data_you_needx = data_you_needx.append(x,ignore_index=True)
+         data_you_needy = data_you_needy.append(y,ignore_index=True)
+         data_you_needname = data_you_needname.append(n,ignore_index=True)
+        
+
+xarray = np.array(data_you_needx)
+yarray = np.array(data_you_needy)
+namearray = np.array(data_you_needname)
+fig, axes = plt.subplots(nrows=6, ncols=9, figsize=(20,10))
+cols = ['{}'.format(col) for col in ("Et30","f(e)","f(n)","a","b","SP","SdP","SA","SB")]
+rows = ['Probe {}'.format(row) for row in [1,2,3,6,7,8]]
+
+
+
+fig.suptitle('Log($I_N*/I_T*$) vs solvent parameters', fontsize=16)
+
+
+plt.rcParams["axes.labelweight"] = "bold"
+
+fig.text(0.5, 0.04, 'Solvent parameter value', ha='center')
+fig.text(0.04, 0.5, 'Log($I_N*/I_T*$)', va='center', rotation='vertical')
+# Comienzo a llenar los suplots con la data y seteo la estetica
+colors = cm.rainbow(np.linspace(0, 1, 150))
+for ax, featurex, featurey, color, name in zip(axes.flatten(), xarray, yarray, colors, namearray):
+
+
+     ax.scatter(featurex, featurey,  marker='o', c=color, s=2, linewidths=2.5 )
+     legend_properties = {'weight':'bold'}
+    #  ax.legend(name, loc=0, handlelength=0, frameon=0, prop=legend_properties)
+#      ax.set_xticks(ticks=range(400,800,50), minor=True)  
+     ax.set_xticks(ticks=[], minor=False) 
+     
+#     ax.set_yticks(ticks=[0,0.25,0.5,0.75,1], minor=True)      
+     ax.set_yticks(ticks=[], minor=False)  
+     ax.tick_params(axis='both', which='both', direction='in', pad=4)
+     ax.tick_params(axis='both', which='minor', size=2 )
+     ax.tick_params(axis='both', which='major', size=3, width= 1)
+#      ax.set_xlim(0,1)
+     
+    #  ax.set_yticks(0,2)
+     ax.spines['right'].set_visible(False)
+     ax.spines['top'].set_visible(False)
+     plt.rcParams["axes.labelweight"] = "bold"
+     plt.xticks(fontweight="bold")
+   
+
+for ax, col in zip(axes[0], cols):
+    ax.set_title(col)
+
+for ax, row in zip(axes[:,0], rows):
+    ax.set_ylabel(row, rotation=1, size='large', labelpad=30)
+
+# fig.tight_layout()
+fig.savefig('imagen.png', format='png', dpi=600)
+fig.savefig('imagen.pdf', format='pdf', dpi=600)
+
+plt.show()
+
