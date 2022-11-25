@@ -1,0 +1,160 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from pdf2image import convert_from_path
+from sklearn import datasets, linear_model
+from sklearn.metrics import mean_squared_error, r2_score
+import math
+from matplotlib.lines import Line2D
+
+df = pd.read_csv("DATA2.txt", header=0, delimiter="\t")
+
+#Parte A: Data #######################################
+"""partimos la data en solventes neutros y aceptores de proton, para ver si cambian las tendencias """
+
+########################i Solventes neutros##############################################
+"""creamos los dataframes vacios para luego ir completando iterativamente con la data """
+data_you_needxneutro=pd.DataFrame()
+data_you_neednameneutro = pd.DataFrame()
+data_you_needyneutro=pd.DataFrame()
+
+"""Hacemos un for for, para que para el dye 1, se carguen Et30, fe, etc y luego para dye 2 los mismos parametros"""
+for i  in (1,2,3,6,7,8):    #loop Solventes neutros
+    for f in ("Et30","f(e)","f(n)","L","b","SP","SdP","SA","SB" ):
+         sv_params = str(f)  #Nombramos la variable sv_params para que sea un str de lo que queremos buscar en el df
+         n = [sv_params] #definimos una variable n que es una lista de todos los parametros. Esto se usa luego para poner los nombres en los graficos 
+         x = df.loc[0:3,sv_params] #Leemos la data de x(Valor de los parametros para cada caso)
+         probe = str(i) #Definimos una variable que sea un string del nombre del dye para tomar los datos del df
+         y = df.loc[0:3, probe] #Seleccionamos los datos de el dye "probe" para cada parametro de solvente
+        
+        # Empezamos a llenar los df que creamos vacios antes para cada parametro y cada dye
+        #Esto se hace de esta manera porque luego vamos a usar un iterable ZIP. Queremos toda la data en un solo df
+         data_you_needxneutro = data_you_needxneutro.append(x,ignore_index=True)
+         data_you_needyneutro = data_you_needyneutro.append(y,ignore_index=True)
+         data_you_neednameneutro = data_you_neednameneutro.append(n,ignore_index=True)
+         
+"""Pasamos los df a arrays para poder usar el zip a la hora de graficar """
+xarrayneutro = np.array(data_you_needxneutro)
+yarrayneutro = np.array(data_you_needyneutro)
+namearrayneutro = np.array(data_you_neednameneutro)
+
+
+########################ii) Solventes aceptores###################################################
+"""La explicacion es igual que para solventes neutros, pero se elige otro rango de data"""
+
+data_you_needxaceptor=pd.DataFrame()
+data_you_neednameaceptor = pd.DataFrame()
+data_you_needyaceptor=pd.DataFrame()
+for i  in (1,2,3,6,7,8): #loop Solventes aceptores de H
+    for f in ("Et30","f(e)","f(n)","L","b", "SP","SdP","SA","SB" ):
+         sv_params = str(f)
+         n = [sv_params] 
+         
+         x = df.loc[4:,sv_params]
+         
+         probe = str(i)
+         y = df.loc[4:, probe]
+         data_you_needxaceptor = data_you_needxaceptor.append(x,ignore_index=True)
+         data_you_needyaceptor = data_you_needyaceptor.append(y,ignore_index=True)
+         data_you_neednameaceptor = data_you_neednameaceptor.append(n,ignore_index=True)
+     
+xarrayaceptor = np.array(data_you_needxaceptor)
+yarrayaceptor = np.array(data_you_needyaceptor)
+namearrayaceptor = np.array(data_you_neednameaceptor)
+
+################################Fiteo sin distinguir entre tipo de solvente#########################
+"""Hacemos la regresion lineal. En este caso la hacemos aparte porque queremos trabajar sobre la data sin dividir
+por tipo de solvente"""
+
+data_you_needfit= pd.DataFrame()
+data_you_needR2=pd.DataFrame()
+data_you_needxfit = pd.DataFrame()
+
+
+for i  in (1,2,3,6,7,8):   
+    for f in ("Et30","f(e)","f(n)","L","b", "SP","SdP","SA","SB" ):
+         sv_params = str(f)
+         n = [sv_params] 
+         "Ahora como vemos en x e y elegimos toda la data"
+         x = df.loc[:,sv_params]
+         
+
+         probe = str(i)
+         y = df.loc[:, probe]
+         
+         xarray = np.array(x)
+         xarrayfit = np.reshape(xarray,(-1,1)) #cambia la forma del array, porque si no no fitea
+    
+         yarrayfit = np.array(y)
+         regr = linear_model.LinearRegression()
+         regr.fit(xarrayfit,yarrayfit )
+         y_pred = [regr.predict(xarrayfit)]
+         y_pred2 = regr.predict(xarrayfit) #esta variable es igual que y_pred pero no es lista.Si usamos y_pred
+                                             #para calcular R2, nos devuelve error
+         
+         R2 = [round(r2_score(y, y_pred2),3)] #Calciulamos R2
+         """Llenamos los df para luego pasarlos a array y graficarlos """
+         data_you_needxfit = data_you_needxfit.append(x,ignore_index=True)
+         data_you_needfit = data_you_needfit.append(y_pred,ignore_index=True)
+         data_you_needR2 = data_you_needR2.append(R2,ignore_index=True) 
+
+y_fitarray = np.array(data_you_needfit)
+R2array = np.array(data_you_needR2)
+xfitarray = np.array(data_you_needxfit)
+
+####################################Graficas####################
+
+fig, axes = plt.subplots(nrows=6, ncols=9, figsize=(20,10)) #Creamos una grafica de 6 filas x 8 columnas
+"""Definimos los nombres de las filas y las columnas para luego ponerlas en cada grafico"""
+cols = ['{}'.format(col) for col in ("Et30","f(e)","f(n)","L","b", "SP","SdP","SA","SB")]
+rows = ['Probe {}'.format(row) for row in [1,2,3,6,7,8]]
+
+"""Titulo del grafico"""
+fig.suptitle('$v_{abs} - v_{N*} $ vs solvent parameters', fontsize=16)
+
+
+plt.rcParams["axes.labelweight"] = "bold"
+
+fig.text(0.5, 0.04, 'Solvent parameter value', ha='center')
+fig.text(0.04, 0.5, '$v_{abs} - v_{N*} (cm^{-1})$)', va='center', rotation='vertical')
+# Comienzo a llenar los suplots con la data y seteo la estetica
+# colors = cm.rainbow(np.linspace(0, 1, 150))
+for xfit, R2legend, featureyfit , ax, featurexneutro, featureyneutro, featurexaceptor, featureyaceptor, name,  in zip(xfitarray,R2array, y_fitarray, axes.flatten(), xarrayneutro, yarrayneutro,xarrayaceptor, yarrayaceptor, namearrayneutro):
+     
+     ax.scatter(featurexneutro, featureyneutro,  marker='o', c="blue", s=2, linewidths=2.5 )
+     ax.plot(xfit, featureyfit , c="orange", linewidth = 0.5 )
+    
+     ax.scatter(featurexaceptor	, featureyaceptor,  marker='v', c="red", s=2, linewidths=2.5 )
+     
+     legend_properties = {'weight':'bold'}
+     
+     ax.legend(R2legend, prop={'size': 7} ,loc =0, frameon = False)
+     ax.set_xticks(ticks=[], minor=False)     
+     ax.set_yticks(ticks=[1800, 4000,7100 ], minor=False)  
+     ax.tick_params(axis='both', which='both', direction='in', pad=4)
+     ax.tick_params(axis='both', which='minor', size=2 )
+     ax.tick_params(axis='both', which='major', size=3, width= 1)
+     ax.tick_params(axis='both', which='major', size=3, width= 1, labelsize= 6)
+     ax.set_ylim(1800,7100)
+
+     ax.spines['right'].set_visible(False)
+     ax.spines['top'].set_visible(False)
+     plt.rcParams["axes.labelweight"] = "bold"
+     plt.xticks(fontweight="bold")
+   
+"""Estos loops son para poner el nombre en cada fila y cada columna"""
+for ax, col in zip(axes[0], cols):
+    ax.set_title(col)
+
+for ax, row in zip(axes[:,0], rows):
+    ax.set_ylabel(row, rotation=1, size='large', labelpad=30)
+
+
+fig.savefig('imagen.png', format='png', dpi=900)
+fig.savefig('imagen.pdf', format='pdf', dpi=600)
+
+plt.show()
+
+
+
